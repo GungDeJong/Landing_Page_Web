@@ -32,7 +32,7 @@ export default function Footer() {
                         <h4>Contact</h4>
                         <ul>
                             <li>West Jakarta, Indonesia</li>
-                            <li><a href="mailto:info@inerradix.com">info@inerradix.com</a></li>
+                            <li><a href="mailto:info@inerrad-tech.com">info@inerrad-tech.com</a></li>
                             <li><a href="tel:+622155501899">+62 21 5550 1899</a></li>
                         </ul>
                     </div>

@@ -217,7 +217,7 @@ export default function Home() {
               <p className="sub">Send a message and we&apos;ll reply within one business day.</p>
               <div className="ci">
                 <div><MapPin />West Jakarta, Indonesia</div>
-                <div><Mail />info@inerradix.com</div>
+                <div><Mail />info@inerrad-tech.com</div>
                 <div><Phone />+62 21 5550 1899</div>
               </div>
             </div>
