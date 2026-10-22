@@ -1,40 +1,10 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
-import { randomUUID } from "crypto";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const FILE = path.join(DATA_DIR, "messages.json");
+// Pesan dari form kontak diteruskan ke Formspree, terus Formspree ngririm
+// sebagai email ke info@inerrad-tech.com.
 
-type Message = {
-    id: string;
-    name: string;
-    email: string;
-    company: string;
-    message: string;
-    createdAt: string;
-};
-
-// Antrian sederhana supaya dua pesan yang masuk bersamaan tidak saling menimpa
-let queue: Promise<unknown> = Promise.resolve();
-
-async function readAll(): Promise<Message[]> {
-    try {
-        return JSON.parse(await fs.readFile(FILE, "utf-8"));
-    } catch (err) {
-        if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
-        throw err;
-    }
-}
-
-async function append(entry: Message) {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const all = await readAll();
-    all.push(entry);
-    const tmp = `${FILE}.tmp`;
-    await fs.writeFile(tmp, JSON.stringify(all, null, 2), "utf-8");
-    await fs.rename(tmp, FILE); // tulis atomik, file tidak rusak kalau proses terhenti
-}
+const FORMSPREE_ENDPOINT =
+    process.env.FORMSPREE_ENDPOINT ?? "https://formspree.io/f/moeeappk";
 
 export async function POST(req: Request) {
     let body: Record<string, unknown>;
@@ -64,22 +34,27 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Input is too long." }, { status: 400 });
     }
 
-    const entry: Message = {
-        id: randomUUID(),
-        name,
-        email,
-        company,
-        message,
-        createdAt: new Date().toISOString(),
-    };
-
     try {
-        const job = queue.then(() => append(entry));
-        queue = job.catch(() => { });
-        await job;
+        const res = await fetch(FORMSPREE_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({
+                name,
+                email,
+                company,
+                message,
+                _subject: `Pesan baru dari website: ${name}`,
+                _replyto: email, // tombol Reply di email langsung ke pengirim
+            }),
+        });
+
+        if (!res.ok) {
+            console.error("Formspree error:", res.status, await res.text());
+            throw new Error("Formspree rejected the message");
+        }
         return NextResponse.json({ ok: true });
     } catch (err) {
-        console.error("Failed to save message:", err);
-        return NextResponse.json({ error: "Could not save your message. Please try again." }, { status: 500 });
+        console.error("Failed to send message:", err);
+        return NextResponse.json({ error: "Could not send your message. Please try again." }, { status: 500 });
     }
 }
